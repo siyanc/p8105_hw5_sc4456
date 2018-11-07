@@ -11,6 +11,11 @@ editor_options:
 library(tidyverse)
 library(rvest)
 library(httr)
+knitr::opts_chunk$set(
+  fig.width = 10,
+  fig.asp = .6,
+  out.width = "90%"
+)
 
 ```
 

@@ -57,7 +57,7 @@ tidy_data %>%
   ggplot(aes(x = week, y = value, color = participants)) + geom_line() + facet_grid(~group)
 ```
 
-![](hw5_files/figure-markdown_github/unnamed-chunk-3-1.png)
+<img src="hw5_files/figure-markdown_github/unnamed-chunk-3-1.png" width="90%" />
 
 Problem 2
 =========
@@ -179,4 +179,4 @@ city_prop %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-![](hw5_files/figure-markdown_github/unnamed-chunk-8-1.png)
+<img src="hw5_files/figure-markdown_github/unnamed-chunk-8-1.png" width="90%" />
