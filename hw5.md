@@ -17,7 +17,16 @@ new_file_list= str_remove(file_list, "\\.csv$")
 data_read = data.frame(new_file_list) %>% 
 mutate(file_read = map(.x = df, ~read_csv(.x))) %>% 
   unnest() 
+head(data_read)
 ```
+
+    ##   new_file_list week_1 week_2 week_3 week_4 week_5 week_6 week_7 week_8
+    ## 1        con_01   0.20  -1.31   0.66   1.96   0.23   1.09   0.05   1.94
+    ## 2        con_02   1.13  -0.88   1.07   0.17  -0.83  -0.31   1.58   0.44
+    ## 3        con_03   1.77   3.11   2.22   3.26   3.31   0.89   1.88   1.01
+    ## 4        con_04   1.04   3.66   1.22   2.33   1.47   2.70   1.87   1.66
+    ## 5        con_05   0.47  -0.58  -0.09  -1.37  -0.32  -2.17   0.45   0.48
+    ## 6        con_06   2.37   2.50   1.59  -0.16   2.08   3.07   0.78   2.35
 
 tidy data ?
 
@@ -28,7 +37,16 @@ tidy_data = data_read %>%
   gather(key = "week", value = value, week_1:week_8) %>% 
   mutate(subject_id = as.numeric(subject_id), week = str_remove(week, "week\\_")) %>% 
   mutate(week = as.numeric(week), value = as.numeric(value))
+head(tidy_data)
 ```
+
+    ##   group subject_id week value
+    ## 1   con          1    1  0.20
+    ## 2   con          2    1  1.13
+    ## 3   con          3    1  1.77
+    ## 4   con          4    1  1.04
+    ## 5   con          5    1  0.47
+    ## 6   con          6    1  2.37
 
 Plot
 
@@ -40,3 +58,125 @@ tidy_data %>%
 ```
 
 ![](hw5_files/figure-markdown_github/unnamed-chunk-3-1.png)
+
+Problem 2
+=========
+
+get dat
+
+``` r
+require(RCurl)
+```
+
+    ## Loading required package: RCurl
+
+    ## Loading required package: bitops
+
+    ## 
+    ## Attaching package: 'RCurl'
+
+    ## The following object is masked from 'package:tidyr':
+    ## 
+    ##     complete
+
+``` r
+homicide_data = read.csv(text = getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv"))
+# method I find online to get the data
+```
+
+This dataset has 12 variables and 52179 observations. Variables include `victim last` `victim first` name, `victim age`, `victim race` and others.
+
+tidy
+
+``` r
+homicide_data$city_state = paste(homicide_data$city, homicide_data$state) 
+# create a new variable 
+homicid_data_tidy = homicide_data %>% 
+select(-city, -state) %>% 
+# and remove the repeated information 
+  mutate(disposition = as.character(disposition))
+# change to character to detect the string
+
+dfa = homicid_data_tidy %>% 
+  group_by(city_state) %>% 
+  summarize(total_number = n()) 
+# create one dataframe dfa to save city_state and total number of homicide
+
+dfb = homicid_data_tidy %>% 
+  mutate(solved = str_detect(homicid_data_tidy$disposition, "Closed by arrest")) %>% 
+  group_by(city_state, solved) %>% 
+  summarize(number_solved = n()) %>% 
+  filter(solved == TRUE)
+# get the number of solved homicide for each city
+
+homicide_summarise = merge(dfa, dfb, by = "city_state") %>% 
+  mutate(number_unsolved = total_number - number_solved) %>% 
+  select(-solved, -number_solved) 
+# make a summarize to get the total number of homicide and number of unsolved homicide for each city. 
+head(homicide_summarise)
+```
+
+    ##       city_state total_number number_unsolved
+    ## 1 Albuquerque NM          378             146
+    ## 2     Atlanta GA          973             373
+    ## 3   Baltimore MD         2827            1825
+    ## 4 Baton Rouge LA          424             196
+    ## 5  Birmingham AL          800             347
+    ## 6      Boston MA          614             310
+
+``` r
+Baltimore_MD = homicide_summarise %>% 
+  filter(city_state == "Baltimore MD") 
+prop_test_Baltimore_MD = prop.test(Baltimore_MD$number_unsolved, Baltimore_MD$total_number)
+tidy_prop_test_Baltimore_MD = broom::tidy(prop_test_Baltimore_MD)
+tidy_prop_test_Baltimore_MD %>% pull(estimate) 
+```
+
+    ## [1] 0.6455607
+
+``` r
+tidy_prop_test_Baltimore_MD %>% pull(5) 
+```
+
+    ## [1] 0.6275625
+
+``` r
+tidy_prop_test_Baltimore_MD %>% pull(6)
+```
+
+    ## [1] 0.6631599
+
+``` r
+# ??? how to pull a confidence interval 
+```
+
+``` r
+total_homicide = homicide_summarise %>% 
+  select(-3)
+unsolved_homicide = homicide_summarise %>% 
+  select(-2)
+city_prop  = homicide_summarise %>% 
+  mutate(parameters = map2(unsolved_homicide$number_unsolved,
+                           total_homicide$total_number,
+                           prop.test )) %>% 
+  mutate(parameters = map(parameters, broom::tidy)) %>% 
+  unnest() %>% 
+  select(1,2,3,4,8,9) %>% 
+  janitor::clean_names()
+```
+
+    ## Warning in .f(.x[[i]], .y[[i]], ...): Chi-squared approximation may be
+    ## incorrect
+
+plot
+
+``` r
+city_prop %>% 
+  mutate(city_state = fct_reorder(city_state, desc(estimate))) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf_low, ymax = conf_high)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+![](hw5_files/figure-markdown_github/unnamed-chunk-8-1.png)

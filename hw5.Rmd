@@ -10,6 +10,8 @@ editor_options:
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(rvest)
+library(httr)
+
 ```
 
 # Problem 1
@@ -25,6 +27,7 @@ new_file_list= str_remove(file_list, "\\.csv$")
 data_read = data.frame(new_file_list) %>% 
 mutate(file_read = map(.x = df, ~read_csv(.x))) %>% 
   unnest() 
+head(data_read)
 ```
 
 tidy data  ?
@@ -36,6 +39,7 @@ tidy_data = data_read %>%
   gather(key = "week", value = value, week_1:week_8) %>% 
   mutate(subject_id = as.numeric(subject_id), week = str_remove(week, "week\\_")) %>% 
   mutate(week = as.numeric(week), value = as.numeric(value))
+head(tidy_data)
 ```
 
 Plot
@@ -46,5 +50,88 @@ tidy_data$participants = paste(tidy_data$group, tidy_data$subject_id)
 tidy_data %>% 
   ggplot(aes(x = week, y = value, color = participants)) + geom_line() + facet_grid(~group)
 ```
+
+# Problem 2
+
+get dat
+```{r}
+require(RCurl)
+homicide_data = read.csv(text = getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv"))
+# method I find online to get the data
+```
+
+This dataset has `r ncol(homicide_data)` variables and `r nrow(homicide_data)` observations. Variables include `victim last` `victim first` name, `victim age`, `victim race` and others.
+
+tidy
+```{r}
+homicide_data$city_state = paste(homicide_data$city, homicide_data$state) 
+# create a new variable 
+homicid_data_tidy = homicide_data %>% 
+select(-city, -state) %>% 
+# and remove the repeated information 
+  mutate(disposition = as.character(disposition))
+# change to character to detect the string
+
+dfa = homicid_data_tidy %>% 
+  group_by(city_state) %>% 
+  summarize(total_number = n()) 
+# create one dataframe dfa to save city_state and total number of homicide
+
+dfb = homicid_data_tidy %>% 
+  mutate(solved = str_detect(homicid_data_tidy$disposition, "Closed by arrest")) %>% 
+  group_by(city_state, solved) %>% 
+  summarize(number_solved = n()) %>% 
+  filter(solved == TRUE)
+# get the number of solved homicide for each city
+
+homicide_summarise = merge(dfa, dfb, by = "city_state") %>% 
+  mutate(number_unsolved = total_number - number_solved) %>% 
+  select(-solved, -number_solved) 
+# make a summarize to get the total number of homicide and number of unsolved homicide for each city. 
+head(homicide_summarise)
+```
+
+
+```{r}
+Baltimore_MD = homicide_summarise %>% 
+  filter(city_state == "Baltimore MD") 
+prop_test_Baltimore_MD = prop.test(Baltimore_MD$number_unsolved, Baltimore_MD$total_number)
+tidy_prop_test_Baltimore_MD = broom::tidy(prop_test_Baltimore_MD)
+tidy_prop_test_Baltimore_MD %>% pull(estimate) 
+tidy_prop_test_Baltimore_MD %>% pull(5) 
+tidy_prop_test_Baltimore_MD %>% pull(6)
+# ??? how to pull a confidence interval 
+```
+
+
+```{r}
+total_homicide = homicide_summarise %>% 
+  select(-3)
+unsolved_homicide = homicide_summarise %>% 
+  select(-2)
+city_prop  = homicide_summarise %>% 
+  mutate(parameters = map2(unsolved_homicide$number_unsolved,
+                           total_homicide$total_number,
+                           prop.test )) %>% 
+  mutate(parameters = map(parameters, broom::tidy)) %>% 
+  unnest() %>% 
+  select(1,2,3,4,8,9) %>% 
+  janitor::clean_names()
+
+
+```
+
+
+plot
+
+```{r}
+city_prop %>% 
+  mutate(city_state = fct_reorder(city_state, desc(estimate))) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf_low, ymax = conf_high)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
 
 
