@@ -31,11 +31,11 @@ new_file_list= str_remove(file_list, "\\.csv$")
 # remove .csv 
 data_read = data.frame(new_file_list) %>% 
 mutate(file_read = map(.x = df, ~read_csv(.x))) %>% 
-  unnest() 
+  unnest()
 head(data_read)
 ```
 
-tidy data  ?
+tidy data  
 
 ```{r}
 tidy_data = data_read %>%
@@ -55,6 +55,8 @@ tidy_data$participants = paste(tidy_data$group, tidy_data$subject_id)
 tidy_data %>% 
   ggplot(aes(x = week, y = value, color = participants)) + geom_line() + facet_grid(~group)
 ```
+
+Comment: Based on the plot, the subjects of experimental group has slightly higher value at the beginning compared to control. The value of Sunbjects in experimenatl arm increase over weeks while the control group has no trend.
 
 # Problem 2
 

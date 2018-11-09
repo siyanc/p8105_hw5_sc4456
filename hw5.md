@@ -16,7 +16,7 @@ new_file_list= str_remove(file_list, "\\.csv$")
 # remove .csv 
 data_read = data.frame(new_file_list) %>% 
 mutate(file_read = map(.x = df, ~read_csv(.x))) %>% 
-  unnest() 
+  unnest()
 head(data_read)
 ```
 
@@ -28,7 +28,7 @@ head(data_read)
     ## 5        con_05   0.47  -0.58  -0.09  -1.37  -0.32  -2.17   0.45   0.48
     ## 6        con_06   2.37   2.50   1.59  -0.16   2.08   3.07   0.78   2.35
 
-tidy data ?
+tidy data
 
 ``` r
 tidy_data = data_read %>%
@@ -58,6 +58,8 @@ tidy_data %>%
 ```
 
 <img src="hw5_files/figure-markdown_github/unnamed-chunk-3-1.png" width="90%" />
+
+Comment: Based on the plot, the subjects of experimental group has slightly higher value at the beginning compared to control. The value of Sunbjects in experimenatl arm increase over weeks while the control group has no trend.
 
 Problem 2
 =========
