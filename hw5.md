@@ -6,7 +6,7 @@ Siyan Chen
 Problem 1
 =========
 
-read all data
+### read all data
 
 ``` r
 file_list = list.files(path = "./data") 
@@ -28,7 +28,7 @@ head(data_read)
     ## 5        con_05   0.47  -0.58  -0.09  -1.37  -0.32  -2.17   0.45   0.48
     ## 6        con_06   2.37   2.50   1.59  -0.16   2.08   3.07   0.78   2.35
 
-tidy data
+### tidy data
 
 ``` r
 tidy_data = data_read %>%
@@ -48,7 +48,7 @@ head(tidy_data)
     ## 5   con          5    1  0.47
     ## 6   con          6    1  2.37
 
-Plot
+### Plot
 
 ``` r
 tidy_data$participants = paste(tidy_data$group, tidy_data$subject_id)
@@ -64,31 +64,16 @@ Comment: Based on the plot, the subjects of experimental group has slightly high
 Problem 2
 =========
 
-get dat
-
-``` r
-require(RCurl)
-```
-
-    ## Loading required package: RCurl
-
-    ## Loading required package: bitops
-
-    ## 
-    ## Attaching package: 'RCurl'
-
-    ## The following object is masked from 'package:tidyr':
-    ## 
-    ##     complete
+### get dat
 
 ``` r
 homicide_data = read.csv(text = getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv"))
 # method I find online to get the data
 ```
 
-This dataset has 12 variables and 52179 observations. Variables include `victim last` `victim first` name, `victim age`, `victim race` and others.
+This dataset has 12 variables and 52179 observations. Variables include `city`, `state` `victim age` and others.
 
-tidy
+### tidy data and summarize about number of homicides
 
 ``` r
 homicide_data$city_state = paste(homicide_data$city, homicide_data$state) 
@@ -126,31 +111,24 @@ head(homicide_summarise)
     ## 5  Birmingham AL          800             347
     ## 6      Boston MA          614             310
 
+### prop.test for B city
+
 ``` r
 Baltimore_MD = homicide_summarise %>% 
   filter(city_state == "Baltimore MD") 
 prop_test_Baltimore_MD = prop.test(Baltimore_MD$number_unsolved, Baltimore_MD$total_number)
-tidy_prop_test_Baltimore_MD = broom::tidy(prop_test_Baltimore_MD)
-tidy_prop_test_Baltimore_MD %>% pull(estimate) 
+
+ prop_test_Baltimore_MD %>% 
+   broom::tidy() %>% 
+   select(1,5,6)
 ```
 
-    ## [1] 0.6455607
+    ## # A tibble: 1 x 3
+    ##   estimate conf.low conf.high
+    ##      <dbl>    <dbl>     <dbl>
+    ## 1    0.646    0.628     0.663
 
-``` r
-tidy_prop_test_Baltimore_MD %>% pull(5) 
-```
-
-    ## [1] 0.6275625
-
-``` r
-tidy_prop_test_Baltimore_MD %>% pull(6)
-```
-
-    ## [1] 0.6631599
-
-``` r
-# ??? how to pull a confidence interval 
-```
+### prop.test for each city
 
 ``` r
 total_homicide = homicide_summarise %>% 
@@ -163,14 +141,26 @@ city_prop  = homicide_summarise %>%
                            prop.test )) %>% 
   mutate(parameters = map(parameters, broom::tidy)) %>% 
   unnest() %>% 
-  select(1,2,3,4,8,9) %>% 
+  select(1,4,8,9) %>% 
   janitor::clean_names()
 ```
 
     ## Warning in .f(.x[[i]], .y[[i]], ...): Chi-squared approximation may be
     ## incorrect
 
-plot
+``` r
+head(city_prop)
+```
+
+    ##       city_state  estimate  conf_low conf_high
+    ## 1 Albuquerque NM 0.3862434 0.3372604 0.4375766
+    ## 2     Atlanta GA 0.3833505 0.3528119 0.4148219
+    ## 3   Baltimore MD 0.6455607 0.6275625 0.6631599
+    ## 4 Baton Rouge LA 0.4622642 0.4141987 0.5110240
+    ## 5  Birmingham AL 0.4337500 0.3991889 0.4689557
+    ## 6      Boston MA 0.5048860 0.4646219 0.5450881
+
+### plot
 
 ``` r
 city_prop %>% 
@@ -182,3 +172,5 @@ city_prop %>%
 ```
 
 <img src="hw5_files/figure-markdown_github/unnamed-chunk-8-1.png" width="90%" />
+
+Comment: Tulsa Al looks strange in the plot. Check the data again and found there are two city named Tulsa but with different state. There might be data recording error.
